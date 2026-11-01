@@ -5,6 +5,19 @@ else()
     project(Unishade VERSION 0.6.2 LANGUAGES C CXX)
 endif()
 
+# Produce the user's official logo thumbnail and Windows icon before .rc files are compiled.
+# Uses only built-in Windows PowerShell/.NET APIs and bundled base64 artwork.
+if(WIN32)
+    execute_process(
+        COMMAND powershell -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_SOURCE_DIR}/tools/prepare_windows_brand.ps1"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        RESULT_VARIABLE DSL_BRAND_RESULT
+    )
+    if(NOT DSL_BRAND_RESULT EQUAL 0)
+        message(FATAL_ERROR "Could not generate official DSL MODS Windows icon and logo")
+    endif()
+endif()
+
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
