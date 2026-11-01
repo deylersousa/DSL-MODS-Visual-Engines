@@ -66,7 +66,7 @@ const AddonInfo kAddons[] = {
 
 bool Selected(const InstallOptions& options, Addon addon)
 {
-    return addon == Addon::Depth ? options.depth : options.dlss5;
+    return addon == Addon::DLSS5 && options.dlss5;
 }
 
 const struct
@@ -363,6 +363,8 @@ void InstallReShade(const fs::path& work, const fs::path& files, const ReShadeRe
     const fs::path folder = work / L"reshade";
     fs::create_directories(folder);
     fs::copy_file(files / L"Unishade.exe", folder / L"Unishade.exe");
+    // The official ReShade Add-on Support installer creates dxgi.dll for our
+    // DirectX host. This is not a game-directory injection installer.
     const DWORD code = RunHidden(setup, std::move(verified),
                                  L"\"" + setup.wstring() + L"\" --headless --api dxgi \"" + (folder / L"Unishade.exe").wstring() + L"\"", work,
                                  progress.cancel);
@@ -1019,7 +1021,9 @@ ReShadeRelease FetchReShadeRelease(const std::atomic<bool>& cancel)
 
 bool Install(const InstallOptions& options, const ReShadeRelease& release, Progress& progress)
 {
-    SetupLog("Installing Unishade " UNISHADE_VERSION " to " + PathText(options.directory));
+    if (options.depth)
+        throw std::runtime_error("AI depth estimation has been removed. This installer does not download synthetic depth models.");
+    SetupLog("Installing DSL MODS Visual Engine " UNISHADE_VERSION " to " + PathText(options.directory));
     // A new folder with a random name, so no other program can have prepared its contents.
     std::error_code error;
     const fs::path temp = fs::temp_directory_path(error);
