@@ -1,0 +1,111 @@
+name: DSL MODS Windows CI
+
+on:
+  push:
+    branches:
+      - dsl-visual-engine/development
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    name: Build complete Windows x64 package
+    runs-on: windows-2022
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Show CMake version
+        run: cmake --version
+
+      - name: Prepare brand asset test dependency
+        run: python -m pip install Pillow
+
+      - name: Validate official logo preparation
+        run: python -m unittest discover -s tests -p test_brand_assets.py -v
+
+      - name: Configure x64 build
+        run: cmake -S . -B build -A x64 -DBUILD_TESTING=ON
+
+      - name: Build application
+        run: cmake --build build --config Release --parallel 2
+
+      - name: Run tests
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Build full installer
+        run: cmake --build build --config Release --target installer --parallel 2
+
+      - name: Assemble distribution ZIP
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $package = Join-Path $PWD 'dist/DSL-MODS-Visual-Engine'
+          New-Item -ItemType Directory -Force -Path $package | Out-Null
+
+          $setup = 'build/installer/Unishade-Setup-0.6.2.exe'
+          if (-not (Test-Path $setup)) {
+            throw "Installer output not found: $setup"
+          }
+
+          Copy-Item $setup (Join-Path $package 'DSL-MODS-Visual-Engine-Setup.exe')
+          Copy-Item 'LICENSE' (Join-Path $package 'LICENSE')
+          Copy-Item 'README.md' (Join-Path $package 'README.md')
+          Copy-Item 'installer/CREDITS.txt' (Join-Path $package 'CREDITS.txt')
+
+          # Optional official artwork ships only when its binary assets are present
+          # in the repository. Do not silently download or substitute a logo.
+          if (Test-Path 'assets/brand/dsl-logo-square.png') {
+            $brandTarget = Join-Path $package 'assets/brand'
+            New-Item -ItemType Directory -Force -Path $brandTarget | Out-Null
+            Copy-Item 'assets/brand/*.png' $brandTarget
+          }
+
+          @'
+          DSL MODS VISUAL ENGINE
+          See Beyond. Play Different.
+
+          INSTALLATION
+          1. Extract this ZIP to a folder.
+          2. Run DSL-MODS-Visual-Engine-Setup.exe.
+          3. Follow the setup wizard and allow it to download the current ReShade
+             runtime, shader packages and selected presets.
+          4. Launch DSL MODS Visual Engine from the Start menu.
+
+          IMPORTANT
+          The installer requires an internet connection. It downloads the current
+          ReShade runtime, effect packages and preset files during installation.
+          This ZIP contains the complete installer and required application binaries,
+          but it is not an offline bundle of all shader packages or optional add-ons.
+
+          TARGET
+          Windows 10/11 x64.
+
+          LICENSES
+          See LICENSE and CREDITS.txt for project and third-party notices.
+          '@ | Set-Content -Encoding UTF8 (Join-Path $package 'INSTALL.txt')
+
+          $hash = (Get-FileHash (Join-Path $package 'DSL-MODS-Visual-Engine-Setup.exe') -Algorithm SHA256).Hash
+          "SHA256  $hash  DSL-MODS-Visual-Engine-Setup.exe" |
+            Set-Content -Encoding ASCII (Join-Path $package 'SHA256SUMS.txt')
+
+          $zip = 'dist/DSL-MODS-Visual-Engine-Windows-x64-Full.zip'
+          Compress-Archive -Path (Join-Path $package '*') -DestinationPath $zip -CompressionLevel Optimal -Force
+          if (-not (Test-Path $zip)) {
+            throw 'Distribution ZIP was not created.'
+          }
+          Get-Item $zip | Format-List Name,Length,FullName
+
+      - name: Upload complete Windows distribution
+        uses: actions/upload-artifact@v4
+        with:
+          name: DSL-MODS-Visual-Engine-Windows-x64-Full
+          path: dist/DSL-MODS-Visual-Engine-Windows-x64-Full.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

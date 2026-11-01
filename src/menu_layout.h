@@ -5,12 +5,13 @@
 namespace menu_layout
 {
 // Layout in pixels at 1080p.
-constexpr float kWidth = 460;
+constexpr float kWidth = 820;
 constexpr float kMargin = 16;
-constexpr float kHeader = 74;
-constexpr float kTabs = 42;
-constexpr float kFooter = 64;
-// The least room the tabs get. A window too short for it scrolls the whole menu.
+constexpr float kHeader = 82;
+constexpr float kTabs = 260; // Minimum height reserved for the vertical navigation rail.
+constexpr float kSidebarWidth = 164;
+constexpr float kFooter = 70;
+// The least room the navigation rail gets. A window too short for it scrolls the whole menu.
 constexpr float kMinContent = 160;
 // Text gets hard to read below this, so small windows scroll the menu instead of shrinking it further.
 constexpr float kMinScale = 0.75f;

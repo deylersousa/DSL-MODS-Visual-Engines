@@ -21,6 +21,9 @@ bool Near(float actual, float expected)
 int main()
 {
     bool ok = true;
+    ok &= Check(menu_layout::kSidebarWidth > 0 && menu_layout::kSidebarWidth < menu_layout::kWidth,
+                "premium sidebar fits inside the expanded menu");
+    ok &= Check(menu_layout::kWidth >= 800, "premium menu has room for the navigation rail and content");
     const struct
     {
         float width;
@@ -37,7 +40,7 @@ int main()
         { 5120, 1440, 4.0f / 3 },
         { 640, 480, 0.75f },
         { 320, 1080, 0.75f },
-        { 400, 1080, 400.0f / 492 },
+        { 400, 1080, 0.75f },
     };
     for (const auto& resolution : resolutions)
     {

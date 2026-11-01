@@ -287,6 +287,14 @@ public:
         winrt::com_ptr<IWICBitmapDecoder> decoder;
         if (key == "logo")
         {
+            // Prefer the official DSL artwork installed beside the launcher.
+            // Preserve the built-in logo as a safe fallback for older installations.
+            const fs::path brand = fs::path(ExeDirectory()) / L"assets" / L"brand" / L"dsl-logo-square.png";
+            if (SUCCEEDED(l.imaging->CreateDecoderFromFilename(brand.c_str(), nullptr, GENERIC_READ,
+                                                               WICDecodeMetadataCacheOnLoad, decoder.put())) &&
+                DecodedPixels(decoder.get(), size, rgba))
+                return true;
+            decoder = nullptr;
             const HRSRC info = FindResourceW(nullptr, MAKEINTRESOURCEW(IDR_LOGO), RT_RCDATA);
             const HGLOBAL resource = info ? LoadResource(nullptr, info) : nullptr;
             winrt::com_ptr<IWICStream> stream;
@@ -431,7 +439,7 @@ void Describe()
 
     l.update = AvailableUpdate();
     if (!l.update.version.empty())
-        model.cards.push_back({ .title = "Unishade " + Utf8(l.update.version) + " is available", .attention = true, .buttons = { "Download" } });
+        model.cards.push_back({ .title = "DSL MODS Visual Engine " + Utf8(l.update.version) + " is available", .attention = true, .buttons = { "Download" } });
 
     LocateGames();
     l.presets.clear();
@@ -477,7 +485,7 @@ void Describe()
 
     launcher::Discord discord{ .on = DiscordPresenceEnabled() };
     if (!g.target)
-        discord.status = "Shows up once Unishade is running on a game.";
+        discord.status = "Shows up once DSL MODS Visual Engine is running on a game.";
     else
         switch (const DiscordStatus status = CurrentDiscordStatus(); status.state)
         {
@@ -1029,7 +1037,7 @@ void AddTrayIcon()
     data.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_SHOWTIP;
     data.uCallbackMessage = kTrayMessage;
     data.hIcon = l.trayIcon;
-    wcscpy_s(data.szTip, std::size(data.szTip), L"Unishade");
+    wcscpy_s(data.szTip, std::size(data.szTip), L"DSL MODS Visual Engine");
     // TaskbarCreated also comes when the taskbar's scaling changes, while the icon is still there.
     Shell_NotifyIconW(NIM_DELETE, &data);
     l.trayAdded = Shell_NotifyIconW(NIM_ADD, &data) != FALSE;
@@ -1084,7 +1092,7 @@ bool ConfirmQuit()
     }
     const std::wstring name = ActivePresetName();
     const std::wstring question = L"Save the changes to " + (name.empty() ? std::wstring(L"the preset") : name) + L" before quitting?";
-    switch (MessageBoxW(g.launcher, question.c_str(), L"Unishade", MB_YESNOCANCEL | MB_ICONWARNING))
+    switch (MessageBoxW(g.launcher, question.c_str(), L"DSL MODS Visual Engine", MB_YESNOCANCEL | MB_ICONWARNING))
     {
     case IDYES:
         FlushPresets(true);
@@ -1102,7 +1110,7 @@ void TrayMenu(int x, int y)
     const HMENU menu = CreatePopupMenu();
     if (!menu)
         return;
-    AppendMenuW(menu, MF_STRING, kOpenCommand, L"Open Unishade");
+    AppendMenuW(menu, MF_STRING, kOpenCommand, L"Open DSL MODS Visual Engine");
     AppendMenuW(menu, MF_STRING | (g.captureEnabled ? MF_CHECKED : MF_UNCHECKED), kEffectsCommand, L"Show effects");
     AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
     AppendMenuW(menu, MF_STRING, kQuitCommand, L"Quit");
@@ -1311,8 +1319,8 @@ void CreateLauncher()
     l.ui = create ? create() : nullptr;
     if (!l.ui)
     {
-        Log(LogLevel::Error, L"Could not load %ls (error %lu). Run Setup again to repair Unishade.", kUiModule, GetLastError());
-        throw std::runtime_error("Could not load UnishadeUi.dll");
+        Log(LogLevel::Error, L"Could not load %ls (error %lu). Run Setup again to repair DSL MODS Visual Engine.", kUiModule, GetLastError());
+        throw std::runtime_error("Could not load the DSL MODS launcher UI module");
     }
     if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(l.imaging.put()))))
         Log(LogLevel::Warning, L"The launcher could not load pictures, so games show their first letter.");
@@ -1321,11 +1329,15 @@ void CreateLauncher()
     wc.lpfnWndProc = WndProc;
     wc.hInstance = GetModuleHandleW(nullptr);
     wc.hIcon = LoadIconW(wc.hInstance, MAKEINTRESOURCEW(1));
+    // Explicit small icon for the title bar; the generated DSL-MODS.ico
+    // supplies both 16/32px representations rather than the old UniShade icon.
+    wc.hIconSm = static_cast<HICON>(LoadImageW(wc.hInstance, MAKEINTRESOURCEW(1), IMAGE_ICON,
+                                              GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_SHARED));
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.lpszClassName = kLauncherClass;
     RegisterClassExW(&wc);
     l.taskbarCreated = RegisterWindowMessageW(L"TaskbarCreated");
-    g.launcher = CreateWindowExW(0, kLauncherClass, L"Unishade", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 100, 100, nullptr, nullptr,
+    g.launcher = CreateWindowExW(0, kLauncherClass, L"DSL MODS Visual Engine", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, 100, 100, nullptr, nullptr,
                                  wc.hInstance, nullptr);
     winrt::check_bool(g.launcher != nullptr);
     DarkFrame(g.launcher);

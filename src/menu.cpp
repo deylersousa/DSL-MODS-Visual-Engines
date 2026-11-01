@@ -445,8 +445,23 @@ Pixels MipmapPixels(IWICImagingFactory* factory, IWICBitmapDecoder* decoder, UIN
     return pixels;
 }
 
+Pixels ImagePixels(const fs::path& file, UINT size);
+
 Pixels LogoPixels(UINT size)
 {
+    // Optional official 16:9 artwork, letterboxed into a square by the asset tool.
+    // The original embedded image remains the fallback when the file is unavailable.
+    wchar_t executable[MAX_PATH] = {};
+    if (GetModuleFileNameW(nullptr, executable, MAX_PATH) != 0)
+    {
+        const fs::path brand = fs::path(executable).parent_path() / L"assets" / L"brand" / L"dsl-logo-square.png";
+        if (fs::exists(brand))
+        {
+            Pixels official = ImagePixels(brand, size);
+            if (official && !official->empty())
+                return official;
+        }
+    }
     const HRSRC info = FindResourceW(nullptr, MAKEINTRESOURCEW(IDR_LOGO), RT_RCDATA);
     const HGLOBAL resource = info ? LoadResource(nullptr, info) : nullptr;
     winrt::com_ptr<IWICImagingFactory> factory;
@@ -2545,7 +2560,7 @@ void TechniqueRow(size_t index, size_t& moveFrom, size_t& moveTo)
     const bool expanded = m.expanded == technique.key;
     ImGui::PushID(technique.key.c_str());
     const ImVec2 start = ImGui::GetCursorScreenPos();
-    const ImVec2 size(ImGui::GetContentRegionAvail().x, S(38));
+    const ImVec2 size(ImGui::GetContentRegionAvail().x, S(46));
     if (!expanded && !ImGui::IsRectVisible(size))
     {
         ImGui::Dummy(size);
@@ -2577,8 +2592,8 @@ void TechniqueRow(size_t index, size_t& moveFrom, size_t& moveTo)
         }
     }
     ImDrawList* draw = ImGui::GetWindowDrawList();
-    if (hovered || expanded)
-        draw->AddRectFilled(start, start + size, hovered ? kCardHover : kCard, S(8));
+    draw->AddRectFilled(start, start + size, hovered ? kCardHover : kCard, S(8));
+    draw->AddRect(start, start + size, expanded ? kBorderStrong : kBorder, S(8), 0, S(1));
 
     ImGui::SetCursorScreenPos(start + ImVec2(S(10), (size.y - S(18)) / 2));
     if (Switch("on", on))
@@ -2622,7 +2637,7 @@ void EffectsTab()
     if (m.techniques.empty() && m.effectsEmpty)
     {
         ImGui::Dummy(ImVec2(0, S(6)));
-        Text(m.effectFiles == false ? "No effects are installed. Run Unishade Setup again to download them."
+        Text(m.effectFiles == false ? "No effects are installed. Run DSL MODS Visual Engine Setup again to download them."
                                     : "No effects loaded. The ReShade button below opens ReShade's menu, which shows why.",
              kDim, 14);
         return;
@@ -2856,7 +2871,7 @@ void FrameRateRow()
     }
     const int choice = ChoiceOf(kFrameRates, limit);
     const bool custom = m.customRatePicked || choice == kCustom;
-    const int clicked = ChoiceRow("Frame rate", "The most frames a second Unishade shows. A lower limit leaves more of the GPU to the game.",
+    const int clicked = ChoiceRow("Frame rate", "The most frames a second DSL MODS Visual Engine shows. A lower limit leaves more of the GPU to the game.",
                                   { "Follow game", "120 FPS", "60 FPS", "Custom" }, custom ? kCustom : choice);
     if (clicked == kCustom)
     {
@@ -2955,7 +2970,7 @@ void GeneralSettings()
 
     ImGui::Dummy(ImVec2(0, S(14)));
     Heading("UPDATES");
-    if (SwitchRow("update_checks", UpdateChecksEnabled(), "Check for updates", "Asks GitHub for a newer version when Unishade starts. Applies from the next start."))
+    if (SwitchRow("update_checks", UpdateChecksEnabled(), "Check for updates", "Asks GitHub for a newer version when DSL MODS Visual Engine starts. Applies from the next start."))
         SetUpdateChecksEnabled(!UpdateChecksEnabled());
 }
 
@@ -2986,7 +3001,7 @@ void ConfirmDialog()
         DialogText("Reset every setting of " + m.confirmEffect + "?",
                    AutoSavePresets() ? "They go back to their defaults and the preset is saved." : "They go back to their defaults.");
     else
-        DialogText("Reset every shortcut?", "They go back to the keys Unishade starts with.");
+        DialogText("Reset every shortcut?", "They go back to the default DSL MODS Visual Engine shortcuts.");
     const int clicked = DialogButtons({ "Cancel", "Reset" });
     if (clicked == 1)
     {
@@ -3062,7 +3077,7 @@ void StatusTab()
         ImGui::PushStyleColor(ImGuiCol_Border, Color(theme::kAccent, 120));
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(14), S(12)));
         ImGui::BeginChild("update", ImVec2(0, 0), ImGuiChildFlags_Borders | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_NavFlattened);
-        Text("Unishade " + Utf8(update.version) + " is available", kText, 14.5f);
+        Text("DSL MODS Visual Engine " + Utf8(update.version) + " is available", kText, 14.5f);
         Text("Download the new Setup and run it. Your presets and settings stay.", kDim, 13);
         if (Button("Download", ImVec2(S(110), S(30)), true))
             ShellOpen(update.url);
@@ -3110,7 +3125,7 @@ void StatusTab()
         ShellOpen(kHelpUrl);
     ImGui::PopFont();
     ImGui::Dummy(ImVec2(0, S(6)));
-    Text("Unishade " UNISHADE_VERSION ". Effects run on ReShade by crosire.", kDim, 12.5f);
+    Text("DSL MODS Visual Engine " UNISHADE_VERSION ". Effects run on ReShade by crosire.", kDim, 12.5f);
 }
 
 // Frame
@@ -3124,8 +3139,8 @@ void Header(ImVec2 origin, float width)
         draw->AddImage(ImTextureRef(texture), logoPosition, logoPosition + ImVec2(logo, logo));
     const float textX = S(kPadding) + logo + S(12);
     PushSize(16.5f);
-    draw->AddText(origin + ImVec2(textX, S(17)), kText, "Unishade");
-    const float titleWidth = ImGui::CalcTextSize("Unishade").x;
+    draw->AddText(origin + ImVec2(textX, S(13)), kText, "DSL MODS");
+    const float titleWidth = ImGui::CalcTextSize("DSL MODS").x;
     ImGui::PopFont();
     // The right side holds the effects switch, its label and, with auto-save off, the save icon.
     PushSize(13);
@@ -3138,9 +3153,12 @@ void Header(ImVec2 origin, float width)
     const std::string preset = Utf8(m.current.stem().wstring());
     const ImVec2 nameSize = ImGui::CalcTextSize(preset.c_str());
     draw->PushClipRect(origin, origin + ImVec2((AutoSavePresets() ? labelX : saveX) - S(12), S(kHeader)), true);
-    draw->AddText(origin + ImVec2(textX, S(39)), kDim, preset.c_str());
+    PushSize(10.5f);
+    draw->AddText(origin + ImVec2(textX, S(34)), kAccentHover, "SEE BEYOND. PLAY DIFFERENT.");
+    ImGui::PopFont();
+    draw->AddText(origin + ImVec2(textX, S(53)), kDim, preset.c_str());
     if (m.unsaved)
-        draw->AddCircleFilled(origin + ImVec2(textX + nameSize.x + S(7), S(39) + ImGui::GetFontSize() / 2 + S(1)), S(3), kWarning);
+        draw->AddCircleFilled(origin + ImVec2(textX + nameSize.x + S(7), S(53) + ImGui::GetFontSize() / 2 + S(1)), S(3), kWarning);
     draw->PopClipRect();
     ImGui::PopFont();
 
@@ -3191,12 +3209,23 @@ void Header(ImVec2 origin, float width)
     Rainbow(draw, origin + ImVec2(0, S(kHeader) - S(2)), origin + ImVec2(width, S(kHeader)));
 }
 
-void Tabs(ImVec2 origin, float width)
+void Sidebar(ImVec2 origin, float height)
 {
+    ImDrawList* draw = ImGui::GetWindowDrawList();
+    const float left = origin.x;
+    const float top = origin.y + S(kHeader);
+    const float sidebarWidth = S(menu_layout::kSidebarWidth);
+    const float bottom = top + height;
+    draw->AddRectFilled(ImVec2(left, top), ImVec2(left + sidebarWidth, bottom), kInset);
+    draw->AddLine(ImVec2(left + sidebarWidth, top), ImVec2(left + sidebarWidth, bottom), kBorder);
+
+    PushSize(10.5f);
+    draw->AddText(ImVec2(left + S(16), top + S(16)), kDim, "WORKSPACE");
+    ImGui::PopFont();
+
     struct Entry
     {
         const char* name;
-        // Empty for DLSS5. RenoDX's add-on only draws its settings in ReShade's menu, so its tab opens that.
         std::optional<Tab> tab;
     };
     Entry entries[5];
@@ -3208,16 +3237,18 @@ void Tabs(ImVec2 origin, float width)
     entries[count++] = { "Settings", Tab::Settings };
     entries[count++] = { "Status", Tab::Status };
 
-    ImDrawList* draw = ImGui::GetWindowDrawList();
-    const float tabWidth = (width - S(kPadding) * 2) / count;
-    const bool problems = m.problems;
-    PushSize(14);
+    const float rowHeight = S(42);
+    const float rowX = left + S(9);
+    const float rowWidth = sidebarWidth - S(18);
+    float y = top + S(39);
+    PushSize(13.5f);
     for (int i = 0; i < count; ++i)
     {
         const Entry& entry = entries[i];
-        const ImVec2 start = origin + ImVec2(S(kPadding) + i * tabWidth, S(kHeader));
-        ImGui::SetCursorScreenPos(start);
-        if (ImGui::InvisibleButton(entry.name, ImVec2(tabWidth, S(kTabs)), ImGuiButtonFlags_EnableNav))
+        const ImVec2 rowMin(rowX, y);
+        const ImVec2 rowMax(rowX + rowWidth, y + rowHeight - S(3));
+        ImGui::SetCursorScreenPos(rowMin);
+        if (ImGui::InvisibleButton(entry.name, ImVec2(rowWidth, rowHeight - S(3)), ImGuiButtonFlags_EnableNav))
         {
             if (entry.tab)
                 m.tab = *entry.tab;
@@ -3227,17 +3258,23 @@ void Tabs(ImVec2 origin, float width)
         const bool hovered = ImGui::IsItemHovered();
         HandOnHover();
         const bool active = entry.tab == m.tab;
-        const ImVec2 text = ImGui::CalcTextSize(entry.name);
-        const ImVec2 textStart = start + ImVec2((tabWidth - text.x) / 2, (S(kTabs) - text.y) / 2);
-        draw->AddText(textStart, active || hovered ? kText : kDim, entry.name);
+        if (active || hovered)
+            draw->AddRectFilled(rowMin, rowMax, active ? Color(theme::kAccent, 48) : kCardHover, S(6));
         if (active)
-            draw->AddRectFilled(ImVec2(textStart.x - S(6), start.y + S(kTabs) - S(2)), ImVec2(textStart.x + text.x + S(6), start.y + S(kTabs)),
-                                kAccent, S(1));
-        if (entry.tab == Tab::Status && problems)
-            draw->AddCircleFilled(textStart + ImVec2(text.x + S(6), S(3)), S(3), kWarning);
+            draw->AddRectFilled(ImVec2(rowMin.x, rowMin.y + S(8)),
+                                ImVec2(rowMin.x + S(2), rowMax.y - S(8)), kAccentHover, S(1));
+        const ImVec2 labelSize = ImGui::CalcTextSize(entry.name);
+        draw->AddText(ImVec2(rowMin.x + S(13), rowMin.y + (rowHeight - labelSize.y) * 0.5f),
+                      active || hovered ? kText : kDim, entry.name);
+        if (entry.tab == Tab::Status && m.problems)
+            draw->AddCircleFilled(ImVec2(rowMax.x - S(12), rowMin.y + rowHeight * 0.5f - S(1)), S(3), kWarning);
+        y += rowHeight;
     }
     ImGui::PopFont();
-    draw->AddLine(origin + ImVec2(0, S(kHeader + kTabs)), origin + ImVec2(width, S(kHeader + kTabs)), kBorder);
+
+    PushSize(10.5f);
+    draw->AddText(ImVec2(left + S(16), bottom - S(27)), kDim, "DSL MODS  /  IN-GAME");
+    ImGui::PopFont();
 }
 
 // Effects stay off while the compare button is held.
@@ -3343,17 +3380,20 @@ void DrawMenu()
     const bool scrolls = size.y > available;
     ImGui::SetNextWindowPos(ImVec2(S(kMargin), S(kMargin)));
     ImGui::SetNextWindowSize(ImVec2(width, available));
-    ImGui::Begin("Unishade##menu", nullptr,
+    ImGui::Begin("DSL MODS Visual Engine##menu", nullptr,
                  ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
                      (scrolls ? ImGuiWindowFlags_None : ImGuiWindowFlags_NoScrollWithMouse));
     const ImVec2 origin = ImGui::GetWindowPos() - ImVec2(0, ImGui::GetScrollY());
     Header(origin, width);
-    Tabs(origin, width);
 
-    const float top = S(kHeader + kTabs) + 1;
-    ImGui::SetCursorScreenPos(origin + ImVec2(0, top));
+    const float top = S(kHeader);
+    const float contentLeft = S(menu_layout::kSidebarWidth);
+    const float contentWidth = std::max(width - contentLeft, S(220));
+    const float contentHeight = size.y - top - S(kFooter);
+    Sidebar(origin, contentHeight);
+    ImGui::SetCursorScreenPos(origin + ImVec2(contentLeft, top));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(S(kPadding), S(16)));
-    ImGui::BeginChild("content", ImVec2(width, size.y - top - S(kFooter)), ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_NavFlattened);
+    ImGui::BeginChild("content", ImVec2(contentWidth, contentHeight), ImGuiChildFlags_AlwaysUseWindowPadding | ImGuiChildFlags_NavFlattened);
     ImGui::PopStyleVar();
     switch (m.tab)
     {
@@ -3663,12 +3703,12 @@ void Guarded(F&& callback) noexcept
     catch (const std::exception& e)
     {
         if (!std::exchange(m.errorReported, true))
-            Log(LogLevel::Error, L"The Unishade menu ran into an error: %hs", e.what());
+            Log(LogLevel::Error, L"The DSL MODS menu ran into an error: %hs", e.what());
     }
     catch (...)
     {
         if (!std::exchange(m.errorReported, true))
-            Log(LogLevel::Error, L"The Unishade menu ran into an unknown error.");
+            Log(LogLevel::Error, L"The DSL MODS menu ran into an unknown error.");
     }
 }
 
@@ -3877,7 +3917,7 @@ void ShowStartHint()
     if (!AddonRegistered() || m.hintShown)
         return;
     m.hintShown = true;
-    ShowToast("opens the Unishade menu", Utf8(g.inputHotkey), kHintDuration);
+    ShowToast("opens the DSL MODS menu", Utf8(g.inputHotkey), kHintDuration);
 }
 
 void RequestScreenshot(bool beforeAfter)

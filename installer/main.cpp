@@ -155,7 +155,6 @@ struct App
     char directory[1024]{};
     std::string directoryError;
     bool presets = true;
-    bool depth = false;
     bool dlss5 = false;
 
     Task releaseTask;
@@ -270,7 +269,7 @@ void CaptureShortcut(UINT key)
         const Hotkey& taken = app.hotkeys.*other.member;
         if (&other != &shortcut && taken.key == hotkey.key && taken.modifiers == hotkey.modifiers)
         {
-            app.shortcutError = Utf8(text) + " is already used by another Unishade shortcut.";
+            app.shortcutError = Utf8(text) + " is already used by another DSL MODS Visual Engine shortcut.";
             return;
         }
     }
@@ -301,7 +300,6 @@ void StartInstall()
     InstallOptions options;
     options.directory = Directory();
     options.presets = app.presets;
-    options.depth = app.depth;
     options.dlss5 = app.dlss5;
     app.progress = std::make_unique<Progress>();
     app.notes.clear();
@@ -629,11 +627,11 @@ void Keybinds()
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(2);
     Text("Set your keybinds", kText, 18, ui.semibold);
-    Text(app.hostRunning ? "Click a key, then press the keys you want. They apply the next time Unishade starts."
+    Text(app.hostRunning ? "Click a key, then press the keys you want. They apply the next time DSL MODS Visual Engine starts."
                          : "Click a key, then press the keys you want.",
          kDim, 14.5f);
     Spacing(2);
-    KeybindLine(0, "opens the Unishade menu over the game. Press it again to go back to playing.");
+    KeybindLine(0, "opens the DSL MODS menu over the game. Press it again to go back to playing.");
     KeybindLine(1, "turns the overlay off and on.");
     if (!app.shortcutError.empty())
         Text(app.shortcutError, kError, 14.5f);
@@ -653,10 +651,12 @@ void Sidebar(std::initializer_list<const char*> steps, int current)
     if (ui.logo)
         draw->AddImage(ImTextureID(reinterpret_cast<uintptr_t>(ui.logo.Get())), ImVec2(x - S(8), y), ImVec2(x - S(8) + S(80), y + S(80)));
     y += S(92);
-    draw->AddText(ui.semibold, S(18), ImVec2(x, y), kText, "Unishade");
-    y += S(25);
-    draw->AddText(ui.regular, S(13.5f), ImVec2(x, y), kDim, "Setup " UNISHADE_VERSION);
-    y += S(48);
+    draw->AddText(ui.semibold, S(18), ImVec2(x, y), kText, "DSL MODS");
+    y += S(24);
+    draw->AddText(ui.semibold, S(11.5f), ImVec2(x, y), kAccentHover, "SEE BEYOND. PLAY DIFFERENT.");
+    y += S(20);
+    draw->AddText(ui.regular, S(13.5f), ImVec2(x, y), kDim, "Visual Engine  •  Setup " UNISHADE_VERSION);
+    y += S(40);
 
     int index = 0;
     for (const char* step : steps)
@@ -718,8 +718,10 @@ void CreditsPopup()
 
 void WelcomePage()
 {
-    Title("Install Unishade");
-    Text("Universal post-processing without injection.");
+    Title("Welcome to DSL MODS Visual Engine");
+    Text("SEE BEYOND. PLAY DIFFERENT.", kAccentHover, 14, ui.semibold);
+    Spacing(8);
+    Text("Capture-based post-processing for supported games.");
     Text("Your frame rate will be lower while it runs.", kDim, 15);
     Spacing(18);
     Text("Install folder", kText, 15, ui.semibold);
@@ -741,20 +743,19 @@ void WelcomePage()
 
 void ManagePage()
 {
-    Title("Unishade is installed");
-    std::string version = app.installation && !app.installation->version.empty() ? "Version " + app.installation->version : "Unishade";
+    Title("DSL MODS Visual Engine is installed");
+    std::string version = app.installation && !app.installation->version.empty() ? "Version " + app.installation->version : "DSL MODS Visual Engine";
     Text(version + " is installed in " + app.directory + ".", kDim, 15);
     if (app.installation && app.installation->version != UNISHADE_VERSION)
         Text("This setup installs version " UNISHADE_VERSION ".", kDim, 15);
     Spacing(14);
     if (Card("update", "Update or change add-ons", nullptr, 0,
-             "Get the newest ReShade and effects, or add or remove depth estimation and DLSS5. Your settings and presets stay.", CardKind::Action))
+             "Update ReShade with add-on support and effects, or manage optional DLSS. AI depth estimation is disabled.", CardKind::Action))
     {
-        app.depth = AddonInstalled(Directory(), Addon::Depth);
         app.dlss5 = AddonInstalled(Directory(), Addon::DLSS5);
         app.page = Page::Addons;
     }
-    if (Card("uninstall", "Uninstall", nullptr, 0, "Remove Unishade, ReShade and the effects from this PC.", CardKind::Action))
+    if (Card("uninstall", "Uninstall", nullptr, 0, "Remove DSL MODS Visual Engine, ReShade and the effects from this PC.", CardKind::Action))
         app.page = Page::Uninstall;
 }
 
@@ -762,16 +763,14 @@ void AddonsPage()
 {
     Title("Choose what to install");
     Spacing(6);
-    Card("reshade", "ReShade and effects", "Included", kDim, "ReShade from reshade.me and every effect package on ReShade's official list.", CardKind::Static);
-    if (Card("presets", "Presets", nullptr, 0, "Ready-made looks to start from. Pick one in the Unishade menu.", CardKind::Toggle, app.presets))
+    Card("reshade", "ReShade and effects", "Included", kDim, "ReShade Add-on Support (DirectX 11 dxgi.dll in DSL's host) with official effect packages. No AI depth estimation.", CardKind::Static);
+    if (Card("presets", "Presets", nullptr, 0, "Ready-made looks to start from. Pick one in the DSL MODS menu.", CardKind::Toggle, app.presets))
         app.presets = !app.presets;
     Spacing(8);
     Text("Optional add-ons", kText, 15, ui.semibold);
-    if (Card("depth", "Depth estimation", "Experimental", kWarning,
-             "Makes effects that need depth work, like ambient occlusion, depth of field and fog. An AI model estimates depth from the "
-             "picture on your GPU, which lowers your frame rate. 85 MB download.",
-             CardKind::Toggle, app.depth))
-        app.depth = !app.depth;
+    Card("depth-disabled", "AI depth estimation", "Not installed", kDim,
+         "Removed by DSL MODS. External capture cannot access the game's actual depth buffer. "
+         "For real depth use native ReShade on a compatible game.", CardKind::Static);
     if (Card("dlss5", "DLSS5", "NVIDIA RTX", kSuccess,
              "NVIDIA's DLSS5 through RenoDX's ReShade add-on. Needs an NVIDIA RTX graphics card. 168 MB download.",
              CardKind::Toggle, app.dlss5))
@@ -844,8 +843,8 @@ void FailedPage()
 
 void FinishedPage()
 {
-    Title("Unishade is ready");
-    Text("Start Unishade and open your game. Roblox is detected automatically. Add other games in the Unishade window.", kDim, 15);
+    Title("DSL MODS Visual Engine is ready");
+    Text("Start DSL MODS Visual Engine and open your game. Roblox is detected automatically. Add other games in the DSL MODS Visual Engine window.", kDim, 15);
     Spacing(14);
     Keybinds();
     Spacing(4);
@@ -856,15 +855,15 @@ void FinishedPage()
         Text(note, kWarning, 14.5f);
     }
     Spacing(14);
-    CheckLine("Run Unishade on the high-performance GPU", app.highPerformanceGpu);
+    CheckLine("Run DSL MODS Visual Engine on the high-performance GPU", app.highPerformanceGpu);
     if (!app.hostRunning)
-        CheckLine("Start Unishade now", app.launch);
+        CheckLine("Start DSL MODS Visual Engine now", app.launch);
 }
 
 void UninstallPage()
 {
-    Title("Uninstall Unishade");
-    Text("Removes Unishade, ReShade and the effects from " + std::string(app.directory) + ", and its Start menu shortcuts.", kDim, 15);
+    Title("Uninstall DSL MODS Visual Engine");
+    Text("Removes DSL MODS Visual Engine, ReShade and the effects from " + std::string(app.directory) + ", and its Start menu shortcuts.", kDim, 15);
     Spacing(10);
     CheckLine("Also delete my presets, settings and game list", app.deleteUserFiles);
     Text("That deletes ReShade.ini, ReShadePreset.ini, RobloxShadeHost.ini and games.ini, and the presets and reshade-shaders folders with "
@@ -881,7 +880,7 @@ void UninstalledPage()
 {
     if (app.uninstallTask.error.empty())
     {
-        Title("Unishade was uninstalled");
+        Title("DSL MODS Visual Engine was uninstalled");
         if (!app.deleteUserFiles)
             Text("Your presets and settings are still in " + std::string(app.directory) + ".", kDim, 15);
         else if (app.folderLeft)
@@ -1061,12 +1060,26 @@ ComPtr<ID3D11ShaderResourceView> LoadLogo(UINT size)
     ComPtr<IWICBitmapScaler> scaler;
     ComPtr<IWICFormatConverter> straight;
     std::vector<BYTE> pixels(size * size * 4);
+    // Prefer the official DSL image when it ships alongside Setup, retaining the
+    // embedded bitmap for offline installs and older release packages.
+    if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory))))
+        return nullptr;
+    wchar_t executable[MAX_PATH] = {};
+    if (GetModuleFileNameW(nullptr, executable, MAX_PATH) != 0)
+    {
+        const fs::path brand = fs::path(executable).parent_path() / L"assets" / L"brand" / L"dsl-logo-square.png";
+        factory->CreateDecoderFromFilename(brand.c_str(), nullptr, GENERIC_READ,
+                                           WICDecodeMetadataCacheOnLoad, &decoder);
+    }
+    if (!decoder)
+    {
+        if (FAILED(factory->CreateStream(&stream)) ||
+            FAILED(stream->InitializeFromMemory(reinterpret_cast<BYTE*>(const_cast<char*>(png.data())), static_cast<DWORD>(png.size()))) ||
+            FAILED(factory->CreateDecoderFromStream(stream.Get(), nullptr, WICDecodeMetadataCacheOnLoad, &decoder)))
+            return nullptr;
+    }
     // Scaling with premultiplied alpha keeps the transparent edge from darkening.
-    if (FAILED(CoCreateInstance(CLSID_WICImagingFactory, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&factory))) ||
-        FAILED(factory->CreateStream(&stream)) ||
-        FAILED(stream->InitializeFromMemory(reinterpret_cast<BYTE*>(const_cast<char*>(png.data())), static_cast<DWORD>(png.size()))) ||
-        FAILED(factory->CreateDecoderFromStream(stream.Get(), nullptr, WICDecodeMetadataCacheOnLoad, &decoder)) ||
-        FAILED(decoder->GetFrame(0, &frame)) || FAILED(factory->CreateFormatConverter(&premultiplied)) ||
+    if (FAILED(decoder->GetFrame(0, &frame)) || FAILED(factory->CreateFormatConverter(&premultiplied)) ||
         FAILED(premultiplied->Initialize(frame.Get(), GUID_WICPixelFormat32bppPRGBA, WICBitmapDitherTypeNone, nullptr, 0, WICBitmapPaletteTypeCustom)) ||
         FAILED(factory->CreateBitmapScaler(&scaler)) ||
         FAILED(scaler->Initialize(premultiplied.Get(), size, size, WICBitmapInterpolationModeHighQualityCubic)) ||
@@ -1256,7 +1269,6 @@ int RunWindow(const Arguments& arguments)
                                : app.installation        ? app.installation->directory
                                                          : DefaultDirectory();
     strncpy_s(app.directory, Utf8(directory.wstring()).c_str(), _TRUNCATE);
-    app.depth = AddonInstalled(directory, Addon::Depth);
     app.dlss5 = AddonInstalled(directory, Addon::DLSS5);
     if (arguments.uninstall)
         app.page = Page::Uninstall;
@@ -1275,7 +1287,7 @@ int RunWindow(const Arguments& arguments)
     windowClass.lpszClassName = L"UnishadeSetup";
     RegisterClassExW(&windowClass);
     constexpr DWORD kStyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-    ui.window = CreateWindowExW(0, windowClass.lpszClassName, L"Unishade Setup", kStyle, CW_USEDEFAULT, CW_USEDEFAULT, 100, 100, nullptr,
+    ui.window = CreateWindowExW(0, windowClass.lpszClassName, L"DSL MODS Visual Engine Setup", kStyle, CW_USEDEFAULT, CW_USEDEFAULT, 100, 100, nullptr,
                                 nullptr, windowClass.hInstance, nullptr);
     if (!ui.window)
         return kExitFailed;
@@ -1297,7 +1309,7 @@ int RunWindow(const Arguments& arguments)
 
     if (!CreateDeviceAndSwapchain())
     {
-        MessageBoxW(ui.window, L"Setup could not start its window because DirectX 11 is unavailable.", L"Unishade Setup", MB_ICONERROR);
+        MessageBoxW(ui.window, L"Setup could not start its window because DirectX 11 is unavailable.", L"DSL MODS Visual Engine Setup", MB_ICONERROR);
         return kExitFailed;
     }
     ImGui::CreateContext();
@@ -1390,13 +1402,13 @@ int RunSilent(const Arguments& arguments)
             else if (component == L"presets")
                 options.presets = true;
             else if (component == L"depth")
-                options.depth = true;
+                throw std::runtime_error("AI depth estimation is no longer supported. Use reshade,presets instead.");
             else if (component == L"dlss5")
                 options.dlss5 = true;
             else if (component != L"host" && !component.empty())
-                throw std::runtime_error("Unknown component: " + Utf8(component) + ". Use reshade, presets, depth or dlss5.");
+                throw std::runtime_error("Unknown component: " + Utf8(component) + ". Use reshade, presets or dlss5.");
         }
-        if (!options.reshade && (options.presets || options.depth || options.dlss5))
+        if (!options.reshade && (options.presets || options.dlss5))
             throw std::runtime_error("Presets and add-ons need ReShade. Add reshade to --components.");
         if (options.reshade && !arguments.acceptLicense)
             throw std::runtime_error("Installing ReShade needs --accept-reshade-license. Read the license first: "
@@ -1453,8 +1465,6 @@ Arguments ParseArguments()
             value(sources.presets);
         else if (argument == L"--dlss5-manifest")
             value(sources.dlss5);
-        else if (argument == L"--depth-manifest")
-            value(sources.depth);
         else
             arguments.error = "Unknown option: " + Utf8(argument);
     }
@@ -1480,7 +1490,7 @@ int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int)
     {
         SetupLog(arguments.error);
         if (!arguments.silent)
-            MessageBoxW(nullptr, Wide(arguments.error).c_str(), L"Unishade Setup", MB_ICONERROR);
+            MessageBoxW(nullptr, Wide(arguments.error).c_str(), L"DSL MODS Visual Engine Setup", MB_ICONERROR);
         return kExitFailed;
     }
     const int result = arguments.silent ? RunSilent(arguments) : RunWindow(arguments);

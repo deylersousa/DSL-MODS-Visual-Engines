@@ -1,40 +1,49 @@
 <p align="center">
-  <img src="assets/unishade-banner1.png" alt="Unishade"/>
+  <strong>DSL MODS VISUAL ENGINE</strong><br/>
+  <em>See Beyond. Play Different.</em>
 </p>
 
 <p align="center">
-  <a href="https://unishade.me/download/">Download</a>
-  &nbsp;·&nbsp;
-  <a href="https://unishade.me/docs/">Docs</a>
-  &nbsp;·&nbsp;
-  <a href="https://discord.gg/wVbVUdENas">Discord</a>
+  <strong>Windows 10/11 · x64 · ReShade-powered post-processing</strong>
 </p>
 
-Unishade is an open-source project for universal post-processing without injection. It runs outside the game process and is built for games where traditional ReShade injection isn't available or desirable.
+DSL MODS Visual Engine is a customized desktop host for ReShade-based post-processing. It is being developed from the open-source [UniShade](https://github.com/OMouta/Unishade) project, with a new DSL MODS identity, a black, graphite, silver and white visual system, and a product roadmap focused on game capture, presets, effects and performance controls.
 
-> Note: This project is not affiliated with the unrelated united-debug/unishade repository that has been reported as malicious. Unishade is developed independently, is fully open source, and its source code and releases are available here at OMouta/Unishade. Only download Unishade from unishade.me or this GitHub repository.
+## Design documentation
 
-## Getting started
+- [Brand guide](docs/BRAND_GUIDE.md)
+- [Premium in-game layout specification](docs/IN_GAME_PREMIUM_LAYOUT.md)
 
-1. [Download Setup](https://unishade.me/download/) and run it.
-2. Open your game, click **Add game** in Unishade and pick its window.
-3. Press **Home** in the game and pick a preset.
+## Project status
 
-Games need to run windowed or borderless. Unishade also runs on [macOS and Linux](https://unishade.me/docs/macos-linux/) (experimental), where ReShade itself doesn't.
+This repository contains the upstream host and installer foundation. The DSL MODS customization is being introduced incrementally on a dedicated development branch so that the original working baseline remains available.
 
-If regular ReShade already works in your game, use that.
+### Planned product direction
 
-> [!NOTE]
-> Setup isn't code-signed yet, so the first time Windows may say **Windows protected your PC**. Click **More info**, then **Run anyway**.
+- Branded launcher and setup experience.
+- Custom in-game menu using the existing Dear ImGui/ReShade integration.
+- Black/graphite/silver theme shared across the launcher, installer and in-game menu.
+- Preset library and per-game profiles.
+- Effects browser and technique controls.
+- Hotkey, capture and performance settings.
+- Import/export for compatible ReShade presets and shader assets.
 
-## Help and presets
+## Important architecture note
 
-Ask on [Discord](https://discord.gg/wVbVUdENas). People share their presets there too. The [docs](https://unishade.me/docs/) cover the menu, add-ons and troubleshooting.
+This project follows UniShade's **external capture/host architecture**: it captures a supported game window and presents the processed image through its own host window, with ReShade running in that host. It is **not** a conventional ReShade injection package whose primary output is a drop-in dxgi.dll. The goal is to preserve this architecture and customize its application, installer and in-game overlay.
 
-To build Unishade or send a preset, see [CONTRIBUTING.md](CONTRIBUTING.md).
+Games generally need to run windowed or borderless and must be compatible with Windows Graphics Capture. If conventional ReShade injection already works for a game, the standard ReShade installation may be the more suitable option.
 
-Unishade is free. If you want to support it, I'm on [Ko-fi](https://ko-fi.com/omouta).
+## ReShade Add-on Support and depth
 
-## License
+The Windows installer uses the official **ReShade Add-on Support** distribution and installs its DXGI `dxgi.dll` alongside the **DSL MODS host**, not inside the selected game's directory. The experimental **AI Depth Estimation** download is disabled; it does not provide the game's original depth buffer. Depth-dependent techniques (such as SSR or MXAO) need actual game depth from a compatible native runtime. See [the DXGI/depth integration note](docs/RESHade_ADDON_AND_REAL_DEPTH.md) for limitations and setup details.
 
-[MIT](LICENSE)
+## Building
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the upstream build prerequisites and build workflow. The project currently targets Windows x64 for the DSL MODS product.
+
+## Upstream project and licensing
+
+This project is derived from [OMouta/UniShade](https://github.com/OMouta/Unishade). The upstream MIT license and required copyright/permission notices are retained in [LICENSE](LICENSE). ReShade is a separate project by [crosire](https://github.com/crosire), subject to its own license and notices. DSL MODS Visual Engine is an independent customization and is not presented as an official UniShade or ReShade release.
+
+Before distributing builds, review all third-party licenses, bundled assets, shader licenses and attribution requirements.

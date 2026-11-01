@@ -2,7 +2,6 @@ param(
     [string]$Setup = (Get-ChildItem "$PSScriptRoot/../build/installer/Unishade-Setup-*.exe" |
         Sort-Object LastWriteTime | Select-Object -Last 1).FullName,
     [switch]$DownloadDLSS,
-    [switch]$DownloadDepth,
     [string]$PresetsBaseUrl
 )
 
@@ -58,9 +57,11 @@ Assert-File $hostOnly 'Unishade-Setup.exe' $false
 
 $hostMetadata = [Diagnostics.FileVersionInfo]::GetVersionInfo("$hostOnly/Unishade.exe")
 $setupMetadata = [Diagnostics.FileVersionInfo]::GetVersionInfo($Setup)
-if ($hostMetadata.ProductName -ne 'Unishade' -or $hostMetadata.FileDescription -ne 'Unishade' -or
-    $hostMetadata.OriginalFilename -ne 'Unishade.exe' -or $setupMetadata.ProductName -ne 'Unishade' -or
-    $setupMetadata.FileDescription -ne 'Unishade Setup') {
+if ($hostMetadata.ProductName -ne 'DSL MODS Visual Engine' -or
+    $hostMetadata.FileDescription -ne 'DSL MODS Visual Engine' -or
+    $hostMetadata.OriginalFilename -ne 'Unishade.exe' -or
+    $setupMetadata.ProductName -ne 'DSL MODS Visual Engine' -or
+    $setupMetadata.FileDescription -ne 'DSL MODS Visual Engine Setup') {
     throw 'The executable or installer still has incorrect product metadata.'
 }
 
@@ -240,23 +241,27 @@ if ((Get-Content "$reshade/presets/GenericPreset1.ini" -Raw) -notmatch 'Edited')
 }
 
 $missingManifests = @(
-    '--dlss5-manifest', 'https://github.com/OMouta/Unishade/releases/download/dlss5-assets/not-present.ini',
-    '--depth-manifest', 'https://github.com/OMouta/Unishade/releases/download/depth-assets/not-present.ini')
-# Both add-ons can be picked. One that is skipped keeps the files it had.
+    '--dlss5-manifest', 'https://github.com/OMouta/Unishade/releases/download/dlss5-assets/not-present.ini')
+# AI depth estimation is no longer offered. A failed optional DLSS add-on
+# must still leave ReShade Add-on Support installed with its dxgi.dll.
 New-Item -ItemType Directory -Path "$testRoot/missing-addons" -Force | Out-Null
-Set-Content "$testRoot/missing-addons/depth-anything-v2-small.onnx" 'kept'
-$missing = Invoke-TestInstaller 'missing-addons' 'reshade,dlss5,depth' -Extra $missingManifests -ExpectExitCode 2
+Set-Content "$testRoot/missing-addons/depth-anything-v2-small.onnx" 'stale'
+$missing = Invoke-TestInstaller 'missing-addons' 'reshade,dlss5' -Extra $missingManifests -ExpectExitCode 2
 Assert-File $missing 'Unishade.exe'
 Assert-File $missing 'dxgi.dll'
 Assert-File $missing 'nvngx_dlssnr.dll' $false
 Assert-File $missing 'renodx-dlss.addon64' $false
 Assert-File $missing 'onnxruntime.dll' $false
 Assert-File $missing 'DirectML.dll' $false
-Assert-File $missing 'depth-anything-v2-small.onnx'
+Assert-File $missing 'depth-anything-v2-small.onnx' $false
 $missingLog = Get-Content "$testRoot/missing-addons.log" -Raw
-if ($missingLog -notmatch 'DLSS5 skipped:' -or $missingLog -notmatch 'Depth estimation skipped:') {
-    throw 'Missing add-on downloads were not reported.'
+if ($missingLog -notmatch 'DLSS5 skipped:') {
+    throw 'Missing optional DLSS add-on was not reported.'
 }
+
+# Reject legacy installer requests to download the AI depth model.
+$rejectedDepth = Invoke-TestInstaller 'reject-depth' 'reshade,depth' -ExpectExitCode 1
+Assert-File $rejectedDepth 'dxgi.dll' $false
 
 # Each add-on file must match the SHA-256 in the download list. This list points nvngx_dlssnr.dll at a small file of
 # the depth model's repository, which does not match, so DLSS5 is skipped without downloading its real files. A local
@@ -293,36 +298,6 @@ if ($DownloadDLSS) {
         $pattern = '(?ms)^\[' + [regex]::Escape($file) + '\]\r?\n.*?^sha256=([a-f0-9]{64})'
         $expectedHash = [regex]::Match($manifest, $pattern).Groups[1].Value
         if ((Get-FileHash "$full/$file").Hash -ne $expectedHash) {
-            throw "$file does not match the repository manifest."
-        }
-    }
-}
-
-if ($DownloadDepth) {
-    # A download that does not match its hash also skips the add-on. This one points onnxruntime.dll at another
-    # file of the model's repository.
-    $depthList = Get-Content "$repo/vendor/depth/downloads.ini" -Raw
-    $tamperedList = $depthList -replace '(?m)^url=.*/onnxruntime\.dll(?=\r?$)', "url=$otherFile"
-    if ($tamperedList -eq $depthList) { throw 'Could not change the address in the depth download list.' }
-    Set-Content "$testRoot/tampered-depth.ini" -Encoding Ascii -Value $tamperedList
-    $tampered = Invoke-TestInstaller 'tampered-depth' 'reshade,depth' -ExpectExitCode 2 -Extra @(
-        '--effects-url', "`"$standardEffects`"", '--depth-manifest', "`"$testRoot/tampered-depth.ini`"")
-    Assert-File $tampered 'onnxruntime.dll' $false
-    if ((Get-Content "$testRoot/tampered-depth.log" -Raw) -notmatch 'Depth estimation skipped:.*does not match its checksum') {
-        throw 'Depth estimation was not skipped although a download does not match its hash.'
-    }
-
-    # Installing depth estimation without DLSS5 removes the DLSS5 files.
-    New-Item -ItemType Directory -Path "$testRoot/depth" -Force | Out-Null
-    Set-Content "$testRoot/depth/renodx-dlss.addon64" 'stale'
-    $depth = Invoke-TestInstaller 'depth' 'reshade,depth'
-    Assert-File $depth 'renodx-dlss.addon64' $false
-    $manifest = Get-Content "$repo/vendor/depth/downloads.ini" -Raw
-    foreach ($file in @('onnxruntime.dll', 'DirectML.dll', 'depth-anything-v2-small.onnx')) {
-        Assert-File $depth $file
-        $pattern = '(?ms)^\[' + [regex]::Escape($file) + '\]\r?\n.*?^sha256=([a-f0-9]{64})'
-        $expectedHash = [regex]::Match($manifest, $pattern).Groups[1].Value
-        if ((Get-FileHash "$depth/$file").Hash -ne $expectedHash) {
             throw "$file does not match the repository manifest."
         }
     }
