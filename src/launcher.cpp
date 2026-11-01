@@ -1329,6 +1329,10 @@ void CreateLauncher()
     wc.lpfnWndProc = WndProc;
     wc.hInstance = GetModuleHandleW(nullptr);
     wc.hIcon = LoadIconW(wc.hInstance, MAKEINTRESOURCEW(1));
+    // Explicit small icon for the title bar; the generated DSL-MODS.ico
+    // supplies both 16/32px representations rather than the old UniShade icon.
+    wc.hIconSm = static_cast<HICON>(LoadImageW(wc.hInstance, MAKEINTRESOURCEW(1), IMAGE_ICON,
+                                              GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_SHARED));
     wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     wc.lpszClassName = kLauncherClass;
     RegisterClassExW(&wc);
