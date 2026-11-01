@@ -22,7 +22,7 @@ This repository contains the upstream host and installer foundation. The DSL MOD
 
 - Branded launcher and setup experience.
 - Custom in-game menu using the existing Dear ImGui/ReShade integration.
-- Purple-accent dark theme shared across the launcher, installer and in-game menu.
+- Black/graphite/silver theme shared across the launcher, installer and in-game menu.
 - Preset library and per-game profiles.
 - Effects browser and technique controls.
 - Hotkey, capture and performance settings.
@@ -33,6 +33,10 @@ This repository contains the upstream host and installer foundation. The DSL MOD
 This project follows UniShade's **external capture/host architecture**: it captures a supported game window and presents the processed image through its own host window, with ReShade running in that host. It is **not** a conventional ReShade injection package whose primary output is a drop-in dxgi.dll. The goal is to preserve this architecture and customize its application, installer and in-game overlay.
 
 Games generally need to run windowed or borderless and must be compatible with Windows Graphics Capture. If conventional ReShade injection already works for a game, the standard ReShade installation may be the more suitable option.
+
+## ReShade Add-on Support and depth
+
+The Windows installer uses the official **ReShade Add-on Support** distribution and installs its DXGI `dxgi.dll` alongside the **DSL MODS host**, not inside the selected game's directory. The experimental **AI Depth Estimation** download is disabled; it does not provide the game's original depth buffer. Depth-dependent techniques (such as SSR or MXAO) need actual game depth from a compatible native runtime. See [the DXGI/depth integration note](docs/RESHade_ADDON_AND_REAL_DEPTH.md) for limitations and setup details.
 
 ## Building
 
