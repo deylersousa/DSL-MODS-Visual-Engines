@@ -1,7 +1,7 @@
 #include "resource.h"
 
-1 ICON "../assets/Unishade.ico"
-IDR_LOGO RCDATA "../assets/Unishade.png"
+1 ICON "../assets/brand/DSL-MODS.ico"
+IDR_LOGO RCDATA "../assets/brand/dsl-logo-square.png"
 IDR_FFX_A RCDATA FFX_A_HEADER
 IDR_FFX_FSR1 RCDATA FFX_FSR1_HEADER
 
