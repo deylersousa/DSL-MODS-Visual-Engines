@@ -155,7 +155,6 @@ struct App
     char directory[1024]{};
     std::string directoryError;
     bool presets = true;
-    bool depth = false;
     bool dlss5 = false;
 
     Task releaseTask;
@@ -301,7 +300,6 @@ void StartInstall()
     InstallOptions options;
     options.directory = Directory();
     options.presets = app.presets;
-    options.depth = app.depth;
     options.dlss5 = app.dlss5;
     app.progress = std::make_unique<Progress>();
     app.notes.clear();
@@ -752,9 +750,8 @@ void ManagePage()
         Text("This setup installs version " UNISHADE_VERSION ".", kDim, 15);
     Spacing(14);
     if (Card("update", "Update or change add-ons", nullptr, 0,
-             "Get the newest ReShade and effects, or add or remove depth estimation and DLSS5. Your settings and presets stay.", CardKind::Action))
+             "Update ReShade with add-on support and effects, or manage optional DLSS. AI depth estimation is disabled.", CardKind::Action))
     {
-        app.depth = AddonInstalled(Directory(), Addon::Depth);
         app.dlss5 = AddonInstalled(Directory(), Addon::DLSS5);
         app.page = Page::Addons;
     }
@@ -766,16 +763,14 @@ void AddonsPage()
 {
     Title("Choose what to install");
     Spacing(6);
-    Card("reshade", "ReShade and effects", "Included", kDim, "ReShade from reshade.me and every effect package on ReShade's official list.", CardKind::Static);
+    Card("reshade", "ReShade and effects", "Included", kDim, "ReShade Add-on Support (DirectX 11 dxgi.dll in DSL's host) with official effect packages. No AI depth estimation.", CardKind::Static);
     if (Card("presets", "Presets", nullptr, 0, "Ready-made looks to start from. Pick one in the DSL MODS menu.", CardKind::Toggle, app.presets))
         app.presets = !app.presets;
     Spacing(8);
     Text("Optional add-ons", kText, 15, ui.semibold);
-    if (Card("depth", "Depth estimation", "Experimental", kWarning,
-             "Makes effects that need depth work, like ambient occlusion, depth of field and fog. An AI model estimates depth from the "
-             "picture on your GPU, which lowers your frame rate. 85 MB download.",
-             CardKind::Toggle, app.depth))
-        app.depth = !app.depth;
+    Card("depth-disabled", "AI depth estimation", "Not installed", kDim,
+         "Removed by DSL MODS. External capture cannot access the game's actual depth buffer. "
+         "For real depth use native ReShade on a compatible game.", CardKind::Static);
     if (Card("dlss5", "DLSS5", "NVIDIA RTX", kSuccess,
              "NVIDIA's DLSS5 through RenoDX's ReShade add-on. Needs an NVIDIA RTX graphics card. 168 MB download.",
              CardKind::Toggle, app.dlss5))
@@ -1274,7 +1269,6 @@ int RunWindow(const Arguments& arguments)
                                : app.installation        ? app.installation->directory
                                                          : DefaultDirectory();
     strncpy_s(app.directory, Utf8(directory.wstring()).c_str(), _TRUNCATE);
-    app.depth = AddonInstalled(directory, Addon::Depth);
     app.dlss5 = AddonInstalled(directory, Addon::DLSS5);
     if (arguments.uninstall)
         app.page = Page::Uninstall;
@@ -1408,13 +1402,13 @@ int RunSilent(const Arguments& arguments)
             else if (component == L"presets")
                 options.presets = true;
             else if (component == L"depth")
-                options.depth = true;
+                throw std::runtime_error("AI depth estimation is no longer supported. Use reshade,presets instead.");
             else if (component == L"dlss5")
                 options.dlss5 = true;
             else if (component != L"host" && !component.empty())
-                throw std::runtime_error("Unknown component: " + Utf8(component) + ". Use reshade, presets, depth or dlss5.");
+                throw std::runtime_error("Unknown component: " + Utf8(component) + ". Use reshade, presets or dlss5.");
         }
-        if (!options.reshade && (options.presets || options.depth || options.dlss5))
+        if (!options.reshade && (options.presets || options.dlss5))
             throw std::runtime_error("Presets and add-ons need ReShade. Add reshade to --components.");
         if (options.reshade && !arguments.acceptLicense)
             throw std::runtime_error("Installing ReShade needs --accept-reshade-license. Read the license first: "
@@ -1471,8 +1465,6 @@ Arguments ParseArguments()
             value(sources.presets);
         else if (argument == L"--dlss5-manifest")
             value(sources.dlss5);
-        else if (argument == L"--depth-manifest")
-            value(sources.depth);
         else
             arguments.error = "Unknown option: " + Utf8(argument);
     }
